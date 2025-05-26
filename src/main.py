@@ -18,6 +18,14 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 
 def read_closing_prices(args, ticks):
+    """
+    Read closing prices for given tickers from CSV files.
+
+    param args: An object containing the path to the data directory.
+    param ticks: A list of ticker symbols to load.
+
+    return: A DataFrame with closing prices, where rows are dates and columns are tickers.
+    """
     data_path = f'../data/{args.data}/ourpped'
     path = os.path.join(data_path, '..', 'trading_dates.csv')
     dates = np.genfromtxt(path, dtype=str, delimiter=',', skip_header=False)
@@ -30,6 +38,14 @@ def read_closing_prices(args, ticks):
     return pd.DataFrame(data, columns=ticks, index=dates)
 
 def calc_ic(pred, label):
+    """
+    Calculate Information Coefficient (IC) and Rank IC (RIC) between prediction and ground truth.
+
+    param pred: A 1D array or Series of model predictions.
+    param label: A 1D array or Series of true target values.
+
+    return: A tuple of (IC, RIC), where IC is the Pearson correlation and RIC is the Spearman correlation.
+    """
     df = pd.DataFrame({'pred':pred, 'label':label})
     ic = df['pred'].corr(df['label'])
     ric = df['pred'].corr(df['label'], method='spearman')
@@ -173,6 +189,13 @@ def evaluate_investment(args, model, device, top_k):
 
 
 def get_open_close_ratio(data):
+    """
+    Calculate the ratio of open-to-close return variance to close-to-close return variance.
+
+    param data: A string representing the market identifier (e.g., 'kr', 'us', 'chn', 'uk').
+
+    return: A float value representing the ratio used for return scaling.
+    """
     if data=='kr':
         tra_date = '2014-01-02'
         val_date = '2020-07-01'

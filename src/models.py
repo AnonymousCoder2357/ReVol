@@ -10,12 +10,23 @@ import math
 
     
 class MuSigma(nn.Module):
+    """
+    Computes dynamic mean (mu) and standard deviation (sigma) from input return sequences
+    using a linear projection followed by LSTM and attention mechanism.
+    """
     def __init__(self, hidden_size):
         super(self.__class__, self).__init__()
         self.linear=nn.Linear(4,hidden_size)
         self.lstm=nn.LSTM(hidden_size,hidden_size,1)
 
     def forward(self, x):
+        """
+        Compute the mean (mu) and standard deviation (sigma) of the return series using attention over LSTM outputs.
+
+        param x: Input tensor of shape (B, T, F) or (B, N, T, F), where F must be 4.
+        
+        return: Tuple (mu, sigma) with shape (B, N) or (B,), depending on input shape.
+        """
         x_size=x.size()
         size_4=False
         if len(x_size)==4:
@@ -39,6 +50,10 @@ class MuSigma(nn.Module):
     
 
 class ReVol(nn.Module):
+    """
+    ReVol normalizes input return sequences based on learned mu and sigma,
+    then performs prediction using a base forecasting model.
+    """
     def __init__(self, mu_hidden, oc_ratio, window, device,fm):
         super().__init__()
         self.window=window
@@ -49,6 +64,15 @@ class ReVol(nn.Module):
         self.sqrt_r=math.sqrt(oc_ratio)
     
     def forward(self, x, mask, with_mu=False):
+        """
+        Normalize input using computed mu and sigma, then make predictions with the underlying model.
+
+        param x: Input tensor of shape (B, T, F) or (B, N, T, F), with F=4.
+        param mask: Mask tensor for sequence modeling (e.g., attention mask or padding mask).
+        param with_mu: Boolean flag to return mu and sigma along with prediction.
+
+        return: Predicted values with optional mu and sigma, shape (B, T-1), or tuple (pred, mu, sigma) if with_mu=True.
+        """
         mu,sigma=self.mu_sigma(x)
 
         new_shape = list(x.shape)
@@ -67,6 +91,9 @@ class ReVol(nn.Module):
             return self.model(x_new,mask)*sigma[:,:-1]+mu[:,:-1]
         
 class LSTM(nn.Module):
+    """
+    A simple LSTM-based forecasting model with a linear input projection and output prediction layer.
+    """
     def __init__(self, hidden_size):
         super().__init__()
         self.linear=nn.Linear(4,hidden_size)
@@ -74,6 +101,14 @@ class LSTM(nn.Module):
         self.pred=nn.Linear(hidden_size,1)
 
     def forward(self,x,mask):
+        """
+        Process the input sequence through LSTM and output predicted returns.
+
+        param x: Input tensor of shape (B, N, T, F), where F=4.
+        param mask: Mask tensor (not used in this basic LSTM model, kept for compatibility).
+
+        return: Prediction tensor of shape (B, N).
+        """
         x=x[:,:-1,:,:].contiguous()
         out=x.view(-1,x.size(2),x.size(3))
         out=self.linear(out) #b t h
